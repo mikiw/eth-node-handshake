@@ -1,0 +1,30 @@
+[package]
+name = "eth-node-handshake"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+# TODO: change features = ["full"] to a specific later
+[dependencies]
+tokio = {version = "1.31.0", features= ["net", "rt", "macros", "time", 
+"io-util"]}
+#tokio = { version = "1.36.0", features = ["full"] }
+secp256k1 = { version = "0.28.2", features = [
+  "global-context",
+  "rand-std",
+  "recovery",
+] }
+ecies = {version = "0.2", features = ["std"]}
+rlp = "0.5.2"
+ethereum-types = "0.14.1"
+thiserror = "1.0.46"
+hex = "0.4.3"
+sha2 = "0.10.8"
+sha3 = "0.10.8"
+aes = "0.8.3"
+ctr = "0.9.2"
+bytes = "1.5.0"
+hmac = "0.12.1"
+concat-kdf = "0.1.0"
+byteorder = "1.4.3"
