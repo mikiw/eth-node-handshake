@@ -54,7 +54,7 @@ impl Ecies {
             private_key: secret_key,
             remote_public_key,
             ephemeral_secret_key,
-            nonce: nonce,
+            nonce,
             ephemeral_public_key,
             shared_key,
             auth: None,
