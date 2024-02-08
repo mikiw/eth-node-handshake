@@ -29,14 +29,14 @@ pub struct Handshake {
 }
 
 impl Handshake {
-    pub fn new(private_key: SecretKey, node_public_key: String) -> Self {
-        let node_public_key_decoded = hex::decode(node_public_key).unwrap();
-        let remote_public_key = Self::id2pk(&node_public_key_decoded).unwrap(); // TODO: remove unwraps later
+    pub fn new(private_key: SecretKey, node_public_key: String) -> Result<Self> {
+        let node_public_key_decoded = hex::decode(node_public_key).unwrap_or_default();
+        let remote_public_key = Self::id2pk(&node_public_key_decoded)?;
 
-        Handshake {
+        Ok(Handshake {
             ecies: Ecies::new(private_key, remote_public_key),
             secrets: None,
-        }
+        })
     }
 
     fn id2pk(data: &[u8]) -> Result<PublicKey> {

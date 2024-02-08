@@ -13,7 +13,6 @@ use crate::handshake::Handshake;
 async fn main() {
     // TODO: Fix all unwraps
     // TODO: Add test or tests
-    // TODO: refactor main handshake code
     // TODO: Read all again and check again
 
     let mut args = std::env::args();
@@ -27,7 +26,10 @@ async fn main() {
         println!("Connected to target adress: {:?}", ip);
 
         let private_key = SecretKey::new(&mut secp256k1::rand::thread_rng());
-        let mut handshake = Handshake::new(private_key, node_public_key_input.to_string());
+        let mut handshake = match Handshake::new(private_key, node_public_key_input.to_string()) {
+            Ok(handshake) => handshake,
+            Err(error) => panic!("Wrong node public key: {:?}", error),
+        };
 
         if let Err(e) = handshake.version_5(&mut stream).await {
             println!("{e}");
