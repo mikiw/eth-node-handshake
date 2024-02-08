@@ -6,6 +6,7 @@ use thiserror::Error;
 
 pub type Result<T, E = Error> = std::result::Result<T, E>;
 
+// TODO check again
 #[derive(Debug, Error)]
 pub enum Error {
     #[error("Invalid public key {0}")]
@@ -17,11 +18,11 @@ pub enum Error {
     #[error("Invalid Mac received {0}")]
     InvalidMac(H128),
 
-    #[error("Invalid input {0}")]
-    InvalidInput(String),
+    // #[error("Invalid input {0}")]
+    // InvalidInput(String),
 
-    #[error("Auth response did not received")]
-    AuthResponse(),
+    // #[error("Auth response did not received")]
+    // AuthResponse(),
 
     #[error("Decoder error: {0}")]
     Decoder(#[from] DecoderError),
