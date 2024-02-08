@@ -23,7 +23,6 @@ pub enum Error {
 
     // #[error("Auth response did not received")]
     // AuthResponse(),
-
     #[error("Decoder error: {0}")]
     Decoder(#[from] DecoderError),
 

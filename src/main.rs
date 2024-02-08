@@ -1,12 +1,11 @@
-
 use secp256k1::SecretKey;
 use tokio::net::TcpStream;
 
+mod ecies;
 mod errors;
 mod handshake;
-mod ecies;
-mod utils;
 mod messages;
+mod utils;
 
 use crate::handshake::Handshake;
 

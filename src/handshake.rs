@@ -1,20 +1,26 @@
-use byteorder::{BigEndian, ByteOrder};
-use secp256k1::{PublicKey, SecretKey, SECP256K1};
-use bytes::{Bytes, BytesMut};
-use rlp::{Rlp, RlpStream};
 use aes::cipher::{KeyIvInit, StreamCipher};
+use byteorder::{BigEndian, ByteOrder};
+use bytes::{Bytes, BytesMut};
 use ethereum_types::{H128, H256};
+use rlp::{Rlp, RlpStream};
+use secp256k1::{PublicKey, SecretKey, SECP256K1};
 use sha3::{Digest, Keccak256};
-use tokio::{io::{AsyncReadExt, AsyncWriteExt}, net::TcpStream};
+use tokio::{
+    io::{AsyncReadExt, AsyncWriteExt},
+    net::TcpStream,
+};
 
 // Note: 5 version is backward compatible with 4
 const PROTOCOL_VERSION: usize = 5;
 
 // Hex{0xC2, 0x80, 0x80} -> u8 &[194, 128, 128]
-const ZERO_HEADER: &[u8; 3] = &[194, 128, 128]; 
+const ZERO_HEADER: &[u8; 3] = &[194, 128, 128];
 
 use crate::{
-    ecies::Ecies, errors::{Error, Result}, messages::{Disconnect, Hello}, utils::{Aes256Ctr, HashMac, Secrets}
+    ecies::Ecies,
+    errors::{Error, Result},
+    messages::{Disconnect, Hello},
+    utils::{Aes256Ctr, HashMac, Secrets},
 };
 
 pub struct Handshake {
@@ -191,7 +197,7 @@ impl Handshake {
         });
 
         Ok(())
-    }   
+    }
 
     pub fn write_ack(&mut self) -> BytesMut {
         let msg = Hello {

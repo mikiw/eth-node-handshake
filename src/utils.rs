@@ -1,5 +1,5 @@
-use ethereum_types::{H128, H256};
 use aes::cipher::{generic_array::GenericArray, BlockEncrypt, KeyInit};
+use ethereum_types::{H128, H256};
 use sha3::{Digest, Keccak256};
 
 pub type Aes128Ctr = ctr::Ctr64BE<aes::Aes128>;

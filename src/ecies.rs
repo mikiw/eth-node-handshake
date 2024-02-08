@@ -1,10 +1,10 @@
-use secp256k1::{PublicKey, SecretKey, SECP256K1};
+use aes::cipher::{KeyIvInit, StreamCipher};
 use bytes::{Bytes, BytesMut};
 use ethereum_types::{H128, H256};
-use sha3::Digest;
-use sha2::Sha256;
-use aes::cipher::{KeyIvInit, StreamCipher};
 use hmac::{Hmac, Mac as h_mac};
+use secp256k1::{PublicKey, SecretKey, SECP256K1};
+use sha2::Sha256;
+use sha3::Digest;
 
 use crate::{
     errors::{Error, Result},
@@ -69,7 +69,9 @@ impl Ecies {
 
         let (encryption_key, mac_key) = self.derive_keys(&shared_key)?;
 
-        let total_size = u16::try_from(secp256k1::constants::UNCOMPRESSED_PUBLIC_KEY_SIZE + 16 + data_in.len() + 32)?;
+        let total_size = u16::try_from(
+            secp256k1::constants::UNCOMPRESSED_PUBLIC_KEY_SIZE + 16 + data_in.len() + 32,
+        )?;
 
         let mut encryptor = Aes128Ctr::new(encryption_key.as_ref().into(), iv.as_ref().into());
         let mut encrypted_data = data_in;
@@ -96,21 +98,23 @@ impl Ecies {
         let payload_size = u16::from_be_bytes([data[0], data[1]]);
         *read_bytes = payload_size + 2;
 
-        self.auth_response = Some(Bytes::copy_from_slice(
-            &data[..payload_size as usize + 2],
-        ));
+        self.auth_response = Some(Bytes::copy_from_slice(&data[..payload_size as usize + 2]));
 
         let (_size, rest) = data.split_at_mut(2);
-        let (public_data, rest) = rest.split_at_mut(secp256k1::constants::UNCOMPRESSED_PUBLIC_KEY_SIZE);
+        let (public_data, rest) =
+            rest.split_at_mut(secp256k1::constants::UNCOMPRESSED_PUBLIC_KEY_SIZE);
         let remote_emphmeral_public_key =
             PublicKey::from_slice(public_data).map_err(|e| Error::Secp256k1(e.to_string()))?;
 
         let (iv, rest) = rest.split_at_mut(16);
-        let (encrypted_data, tag) = rest.split_at_mut(payload_size as usize - (secp256k1::constants::UNCOMPRESSED_PUBLIC_KEY_SIZE + 16 + 32));
+        let (encrypted_data, tag) = rest.split_at_mut(
+            payload_size as usize - (secp256k1::constants::UNCOMPRESSED_PUBLIC_KEY_SIZE + 16 + 32),
+        );
 
         let tag = H256::from_slice(&tag[..32]);
 
-        let shared_key = self.calculate_shared_key(&remote_emphmeral_public_key, &self.private_key)?;
+        let shared_key =
+            self.calculate_shared_key(&remote_emphmeral_public_key, &self.private_key)?;
 
         let (encryption_key, mac_key) = self.derive_keys(&shared_key)?;
 
