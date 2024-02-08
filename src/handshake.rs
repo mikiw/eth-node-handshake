@@ -279,7 +279,6 @@ impl Handshake {
         Ok(out)
     }
 
-    // TODO: check again
     pub fn read_ack_frame(&mut self, buf: &mut [u8]) -> Result<Vec<u8>> {
         let (header_bytes, frame) = buf.split_at_mut(32);
         let (header, mac) = header_bytes.split_at_mut(16);

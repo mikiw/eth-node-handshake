@@ -11,21 +11,6 @@ use crate::{
     utils::Aes128Ctr,
 };
 
-// TODO: move to utils later
-pub fn hmac_sha256(
-    mac_key: &H256,
-    iv: &H128,
-    total_size: &[u8; 2],
-    encrypted_data: &BytesMut,
-) -> Result<H256> {
-    let mut hmac = Hmac::<Sha256>::new_from_slice(mac_key.as_ref())?;
-    hmac.update(iv.as_bytes());
-    hmac.update(encrypted_data);
-    hmac.update(total_size);
-
-    Ok(H256::from_slice(&hmac.finalize().into_bytes()))
-}
-
 // Elliptic Curve Integrated Encryption Scheme
 // Asymmetric encryption secrets
 pub struct Ecies {
@@ -75,7 +60,7 @@ impl Ecies {
         let mut encrypted_data = data_in;
         encryptor.apply_keystream(&mut encrypted_data);
 
-        let tag = hmac_sha256(&mac_key, &iv, &total_size.to_be_bytes(), &encrypted_data)?;
+        let tag = Self::tag_hmac_sha256(&mac_key, &iv, &total_size.to_be_bytes(), &encrypted_data)?;
 
         data_out.extend_from_slice(&total_size.to_be_bytes());
         data_out.extend_from_slice(
@@ -131,6 +116,20 @@ impl Ecies {
         decryptor.apply_keystream(decrypted_data);
 
         Ok(decrypted_data)
+    }
+
+    pub fn tag_hmac_sha256(
+        mac_key: &H256,
+        iv: &H128,
+        total_size: &[u8; 2],
+        encrypted_data: &BytesMut,
+    ) -> Result<H256> {
+        let mut hmac = Hmac::<Sha256>::new_from_slice(mac_key.as_ref())?;
+        hmac.update(iv.as_bytes());
+        hmac.update(encrypted_data);
+        hmac.update(total_size);
+    
+        Ok(H256::from_slice(&hmac.finalize().into_bytes()))
     }
 
     fn calculate_shared_key(
