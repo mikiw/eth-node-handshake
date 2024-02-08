@@ -68,7 +68,8 @@ impl Decodable for Hello {
         let mut s = [0_u8; 65];
         s[0] = 4;
         s[1..].copy_from_slice(&id);
-        let id = PublicKey::from_slice(&s).unwrap();
+        let id = PublicKey::from_slice(&s)
+            .map_err(|_| rlp::DecoderError::Custom("wrong id in decode"))?;
 
         Ok(Self {
             protocol_version,

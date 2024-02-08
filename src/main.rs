@@ -11,14 +11,13 @@ use crate::handshake::Handshake;
 
 #[tokio::main(flavor = "current_thread")]
 async fn main() {
-    // TODO: Fix all unwraps
-    // TODO: Add test or tests
+    // TODO: Add tests: integration test, can create Handshake, can create Ecies, wrong data tests, wrong ip
     // TODO: Read all again and check again
 
     let mut args = std::env::args();
     let _inner = args.next();
     let enode = args.next().unwrap_or_default();
-    let split = &enode.as_str()[8..].split("@").collect::<Vec<&str>>();
+    let split = &enode.as_str()[8..].split('@').collect::<Vec<&str>>();
     let node_public_key_input = split[0];
     let ip = split[1];
 

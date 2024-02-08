@@ -11,6 +11,12 @@ pub enum Error {
     #[error("Invalid public key {0}")]
     InvalidPublicKey(String),
 
+    #[error("Invalid secrets in {0}")]
+    InvalidSecret(String),
+
+    #[error("Invalid signature {0}")]
+    InvalidSignature(String),
+
     #[error("Invalid tag received {0}")]
     InvalidTag(H256),
 

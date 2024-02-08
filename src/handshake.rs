@@ -49,7 +49,7 @@ impl Handshake {
     }
 
     pub async fn version_5(&mut self, stream: &mut TcpStream) -> Result<()> {
-        let auth_encrypted = self.write_auth();
+        let auth_encrypted = self.write_auth()?;
 
         if stream.write(&auth_encrypted).await? == 0 {
             return Err(Error::TcpConnectionClosed);
@@ -75,7 +75,7 @@ impl Handshake {
 
         self.derive_secrets(decrypted)?;
 
-        let hello_frame = self.write_ack();
+        let hello_frame = self.write_ack()?;
         if stream.write(&hello_frame).await? == 0 {
             return Err(Error::TcpConnectionClosed);
         }
@@ -96,8 +96,8 @@ impl Handshake {
         Ok(())
     }
 
-    pub fn write_auth(&mut self) -> BytesMut {
-        let signature = self.signature();
+    pub fn write_auth(&mut self) -> Result<BytesMut> {
+        let signature = self.signature()?;
 
         let public_key = &self.ecies.ephemeral_public_key.serialize_uncompressed()[1..];
 
@@ -114,7 +114,7 @@ impl Handshake {
 
         self.ecies.auth = Some(Bytes::copy_from_slice(&buf[..]));
 
-        buf
+        Ok(buf)
     }
 
     pub fn encrypt_message(&self, data_in: BytesMut, data_out: &mut BytesMut) -> Result<usize> {
@@ -129,12 +129,13 @@ impl Handshake {
         self.ecies.decrypt_message(data_in, read_bytes)
     }
 
-    fn signature(&self) -> [u8; 65] {
+    fn signature(&self) -> Result<[u8; 65]> {
         let msg = self.ecies.shared_key ^ self.ecies.nonce;
 
         let (rec_id, sig) = SECP256K1
             .sign_ecdsa_recoverable(
-                &secp256k1::Message::from_digest_slice(msg.as_bytes()).unwrap(),
+                &secp256k1::Message::from_digest_slice(msg.as_bytes())
+                    .map_err(|e| Error::InvalidSignature(e.to_string()))?,
                 &self.ecies.ephemeral_secret_key,
             )
             .serialize_compact();
@@ -143,7 +144,7 @@ impl Handshake {
         signature[..64].copy_from_slice(&sig);
         signature[64] = rec_id.to_i32() as u8;
 
-        signature
+        Ok(signature)
     }
 
     pub fn derive_secrets(&mut self, ack_body: &[u8]) -> Result<()> {
@@ -178,11 +179,21 @@ impl Handshake {
 
         let mut egress_mac = HashMac::new(mac_secret);
         egress_mac.update((mac_secret ^ recipient_nonce).as_bytes());
-        egress_mac.update(self.ecies.auth.as_ref().unwrap());
+        egress_mac.update(
+            self.ecies
+                .auth
+                .as_ref()
+                .ok_or(Error::InvalidSecret("egress mac".to_string()))?,
+        );
 
         let mut ingress_mac = HashMac::new(mac_secret);
         ingress_mac.update((mac_secret ^ self.ecies.nonce).as_bytes());
-        ingress_mac.update(self.ecies.auth_response.as_ref().unwrap());
+        ingress_mac.update(
+            self.ecies
+                .auth_response
+                .as_ref()
+                .ok_or(Error::InvalidSecret("ingress mac".to_string()))?,
+        );
 
         let iv = H128::default();
 
@@ -199,7 +210,7 @@ impl Handshake {
         Ok(())
     }
 
-    pub fn write_ack(&mut self) -> BytesMut {
+    pub fn write_ack(&mut self) -> Result<BytesMut> {
         let msg = Hello {
             protocol_version: PROTOCOL_VERSION,
             client_version: "hello".to_string(),
@@ -225,7 +236,7 @@ impl Handshake {
         H256::from(hasher.finalize().as_ref())
     }
 
-    fn setup_frame(&mut self, data: &[u8]) -> BytesMut {
+    fn setup_frame(&mut self, data: &[u8]) -> Result<BytesMut> {
         let mut buf = [0; 8];
         let n_bytes = 3;
         BigEndian::write_uint(&mut buf, data.len() as u64, n_bytes);
@@ -234,7 +245,10 @@ impl Handshake {
         header_buf[..3].copy_from_slice(&buf[..3]);
         header_buf[3..6].copy_from_slice(ZERO_HEADER);
 
-        let secrets = self.secrets.as_mut().unwrap();
+        let secrets = self
+            .secrets
+            .as_mut()
+            .ok_or(Error::InvalidSecret("setup frame".to_string()))?;
         secrets.egress_aes.apply_keystream(&mut header_buf);
         secrets.egress_mac.compute_header(&header_buf);
 
@@ -262,7 +276,7 @@ impl Handshake {
 
         out.extend_from_slice(mac.as_bytes());
 
-        out
+        Ok(out)
     }
 
     // TODO: check again
@@ -271,7 +285,10 @@ impl Handshake {
         let (header, mac) = header_bytes.split_at_mut(16);
         let mac = H128::from_slice(mac);
 
-        let secrets = self.secrets.as_mut().unwrap();
+        let secrets = self
+            .secrets
+            .as_mut()
+            .ok_or(Error::InvalidSecret("read ack frame".to_string()))?;
 
         secrets.ingress_mac.compute_header(header);
         if mac != secrets.ingress_mac.digest() {
