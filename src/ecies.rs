@@ -27,6 +27,7 @@ pub fn hmac_sha256(
 }
 
 // Elliptic Curve Integrated Encryption Scheme
+// Asymmetric encryption secrets
 pub struct Ecies {
     pub private_key: SecretKey,
     pub remote_public_key: PublicKey,
@@ -41,11 +42,8 @@ pub struct Ecies {
 impl Ecies {
     pub fn new(secret_key: SecretKey, remote_public_key: PublicKey) -> Self {
         let ephemeral_secret_key = SecretKey::new(&mut secp256k1::rand::thread_rng());
-
         let ephemeral_public_key = PublicKey::from_secret_key(SECP256K1, &secret_key);
-
         let nonce = H256::random();
-
         let shared_key = H256::from_slice(
             &secp256k1::ecdh::shared_secret_point(&remote_public_key, &secret_key)[..32],
         );

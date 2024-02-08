@@ -5,11 +5,9 @@ edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
-# TODO: change features = ["full"] to a specific later
 [dependencies]
 tokio = {version = "1.31.0", features= ["net", "rt", "macros", "time", 
 "io-util"]}
-#tokio = { version = "1.36.0", features = ["full"] }
 secp256k1 = { version = "0.28.2", features = [
   "global-context",
   "rand-std",

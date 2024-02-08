@@ -11,18 +11,17 @@ use crate::handshake::Handshake;
 
 #[tokio::main(flavor = "current_thread")]
 async fn main() {
-    // TODO: Apply linter and formats
     // TODO: Fix all unwraps
-    // TODO: Add Errors
-    // TODO: use enode format, clippy etc
-    // TODO: add tests
-    // TODO: implement enode
-    // TODO: add tests
+    // TODO: Add test or tests
     // TODO: refactor main handshake code
     // TODO: Read all again and check again
 
-    let ip = "44.210.78.226:30303";
-    let node_public_key_input = "442f5a25a0c1955e1afa921d13e95a8a4cd928ae50c36d5d7ee16a148f986fb119e126fd9a0a149271ce42ead08c1dff3ba03947faee80face06ea8aef259923";
+    let mut args = std::env::args();
+    let _inner = args.next();
+    let enode = args.next().unwrap_or_default();
+    let split = &enode.as_str()[8..].split("@").collect::<Vec<&str>>();
+    let node_public_key_input = split[0];
+    let ip = split[1];
 
     if let Ok(mut stream) = TcpStream::connect(ip).await {
         println!("Connected to target adress: {:?}", ip);
