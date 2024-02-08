@@ -1,8 +1,8 @@
-# eth-node-handshake
+# Minimalistic ethereum node handshake
 
 Minimalistic ethereum node handshake mainly based on [devp2p](https://github.com/ethereum/devp2p) and [rust-devp2p](https://github.com/vorot93/devp2p).
 
-Get enode of node from [here] (https://ethernodes.org/nodes) and pass it as CLI argument:
+Get enode of node from [here](https://ethernodes.org/nodes) and pass it as CLI argument:
 ```
 cargo run enode://c9d9a8656916a6303e401be2e127ef6054fc3a1f74408593d9cbdb319370c5b13ee98b0d9ef6b7f22a45bec50598a696aa4770cbb9f1109e6ef82ed4d4bea26c@13.115.79.190:30303
 
