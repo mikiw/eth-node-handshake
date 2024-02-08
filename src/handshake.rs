@@ -8,7 +8,7 @@ use sha3::{Digest, Keccak256};
 use tokio::{io::{AsyncReadExt, AsyncWriteExt}, net::TcpStream};
 
 // Note: 5 version is backward compatible with 4
-const VERSION: usize = 5;
+const PROTOCOL_VERSION: usize = 5;
 
 // Hex{0xC2, 0x80, 0x80} -> u8 &[194, 128, 128]
 const ZERO_HEADER: &[u8; 3] = &[194, 128, 128]; 
@@ -23,14 +23,26 @@ pub struct Handshake {
 }
 
 impl Handshake {
-    pub fn new(private_key: SecretKey, remote_public_key: PublicKey) -> Self {
+    pub fn new(private_key: SecretKey, node_public_key: String) -> Self {
+        let node_public_key_decoded = hex::decode(node_public_key).unwrap();
+        let remote_public_key = Self::id2pk(&node_public_key_decoded).unwrap(); // TODO: remove unwraps later
+
         Handshake {
             ecies: Ecies::new(private_key, remote_public_key),
             secrets: None,
         }
     }
 
-    pub async fn v5(&mut self, stream: &mut TcpStream) -> Result<()> {
+    fn id2pk(data: &[u8]) -> Result<PublicKey> {
+        let mut s = [4_u8; 65];
+        s[1..].copy_from_slice(data);
+        let public_key =
+            PublicKey::from_slice(&s).map_err(|e| Error::InvalidPublicKey(e.to_string()))?;
+
+        Ok(public_key)
+    }
+
+    pub async fn version_5(&mut self, stream: &mut TcpStream) -> Result<()> {
         let auth_encrypted = self.write_auth();
 
         if stream.write(&auth_encrypted).await? == 0 {
@@ -62,16 +74,16 @@ impl Handshake {
             return Err(Error::TcpConnectionClosed);
         }
 
-        let frame = self.read_ack_frame(&mut buf[bytes_used as usize..resp])?;
+        let ack_frame = self.read_ack_frame(&mut buf[bytes_used as usize..resp])?;
 
-        let message_id: u8 = rlp::decode(&[frame[0]])?;
+        let message_id: u8 = rlp::decode(&[ack_frame[0]])?;
         if message_id == 0 {
-            let hello: Hello = rlp::decode(&frame[1..])?;
+            let hello: Hello = rlp::decode(&ack_frame[1..])?;
             println!("Hello message from target node:\n{:?}", hello);
         }
 
         if message_id == 1 {
-            let disc: Disconnect = rlp::decode(&frame[1..])?;
+            let disc: Disconnect = rlp::decode(&ack_frame[1..])?;
             println!("Disconnect message from target node: \n{:?}", disc);
         }
 
@@ -87,7 +99,7 @@ impl Handshake {
         stream.append(&&signature[..]);
         stream.append(&public_key);
         stream.append(&self.ecies.nonce.as_bytes());
-        stream.append(&VERSION);
+        stream.append(&PROTOCOL_VERSION);
 
         let auth_body_unencrypted = stream.out();
 
@@ -142,7 +154,7 @@ impl Handshake {
         let recipient_nonce = H256::from_slice(&recipient_nonce_raw);
 
         let ack_vsn: usize = rlp.val_at(2)?;
-        if ack_vsn != VERSION {
+        if ack_vsn != PROTOCOL_VERSION {
             // Ignoring any mismatches in auth-vsn and ack-vsn
         }
 
@@ -166,7 +178,7 @@ impl Handshake {
         ingress_mac.update((mac_secret ^ self.ecies.nonce).as_bytes());
         ingress_mac.update(self.ecies.auth_response.as_ref().unwrap());
 
-        let iv = H128::default(); // TODO: fix this later, or check at least
+        let iv = H128::default();
 
         self.secrets = Some(Secrets {
             aes_secret,
@@ -183,7 +195,7 @@ impl Handshake {
 
     pub fn write_ack(&mut self) -> BytesMut {
         let msg = Hello {
-            protocol_version: VERSION,
+            protocol_version: PROTOCOL_VERSION,
             client_version: "hello".to_string(),
             capabilities: vec![],
             port: 0,
