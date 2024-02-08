@@ -8,7 +8,7 @@ use hmac::{Hmac, Mac as h_mac};
 
 use crate::{
     errors::{Error, Result},
-    utils::{Aes128Ctr},
+    utils::Aes128Ctr,
 };
 
 // TODO: move to utils later
@@ -88,7 +88,6 @@ impl Ecies {
         Ok(data_out.len())
     }
 
-    // TODO: check again
     pub fn decrypt_message<'a>(
         &mut self,
         data: &'a mut [u8],

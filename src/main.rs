@@ -17,7 +17,6 @@ use crate::{
 };
 
 // TODO: move to Ecies
-// Map node id to public key
 fn id2pk(data: &[u8]) -> Result<PublicKey> {
     let mut s = [4_u8; 65];
     s[1..].copy_from_slice(data);
@@ -37,6 +36,7 @@ async fn main() {
     // TODO: implement enode
     // TODO: add tests
     // TODO: refactor main handshake code
+    // TODO: Read all again and check again
 
     let ip = "44.210.78.226:30303";
     let node_public_key_input = "442f5a25a0c1955e1afa921d13e95a8a4cd928ae50c36d5d7ee16a148f986fb119e126fd9a0a149271ce42ead08c1dff3ba03947faee80face06ea8aef259923";
@@ -94,12 +94,7 @@ async fn handshake(stream: &mut TcpStream, node_public_key: PublicKey) -> Result
     }
 
     let frame = handshake.read_ack_frame(&mut buf[bytes_used as usize..resp])?;
-    handle_incoming_frame(frame)?;
 
-    Ok(())
-}
-
-fn handle_incoming_frame(frame: Vec<u8>) -> Result<()> {
     let message_id: u8 = rlp::decode(&[frame[0]])?;
 
     if message_id == 0 {

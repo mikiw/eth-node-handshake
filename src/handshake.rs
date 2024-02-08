@@ -1,7 +1,6 @@
 use byteorder::{BigEndian, ByteOrder};
 use secp256k1::{PublicKey, SecretKey, SECP256K1};
 use bytes::{Bytes, BytesMut};
-
 use rlp::{Rlp, RlpStream};
 use aes::cipher::{KeyIvInit, StreamCipher};
 use ethereum_types::{H128, H256};
@@ -10,8 +9,8 @@ use sha3::{Digest, Keccak256};
 // Note: 5 version is backward compatible with 4
 const VERSION: usize = 5;
 
-// TODO: check this
-const ZERO_HEADER: &[u8; 3] = &[194, 128, 128]; // Hex{0xC2, 0x80, 0x80} -> u8 &[194, 128, 128]
+// Hex{0xC2, 0x80, 0x80} -> u8 &[194, 128, 128]
+const ZERO_HEADER: &[u8; 3] = &[194, 128, 128]; 
 
 use crate::{
     ecies::Ecies, errors::{Error, Result}, messages::Hello, utils::{Aes256Ctr, HashMac, Secrets}
@@ -146,7 +145,7 @@ impl Handshake {
         encoded_hello.extend_from_slice(&rlp::encode(&0_u8));
         encoded_hello.extend_from_slice(&rlp::encode(&msg));
 
-        self.write_frame(&encoded_hello)
+        self.setup_frame(&encoded_hello)
     }
 
     fn create_hash(&self, inputs: &[&[u8]]) -> H256 {
@@ -159,10 +158,9 @@ impl Handshake {
         H256::from(hasher.finalize().as_ref())
     }
 
-    // TODO: check again
-    fn write_frame(&mut self, data: &[u8]) -> BytesMut {
+    fn setup_frame(&mut self, data: &[u8]) -> BytesMut {
         let mut buf = [0; 8];
-        let n_bytes = 3; // 3 * 8 = 24;
+        let n_bytes = 3;
         BigEndian::write_uint(&mut buf, data.len() as u64, n_bytes);
 
         let mut header_buf = [0_u8; 16];
@@ -228,7 +226,7 @@ impl Handshake {
         secrets.ingress_mac.compute_frame(frame_data);
 
         if frame_mac == secrets.ingress_mac.digest() {
-            println!("\nHanshake completed succesfully\n Received MAC is valid!!!\n");
+            println!("\nHanshake completed succesfully\n Received MAC is valid!\n");
         } else {
             return Err(Error::InvalidMac(frame_mac));
         }
