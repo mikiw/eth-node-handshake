@@ -5,6 +5,7 @@ use rlp::{Rlp, RlpStream};
 use aes::cipher::{KeyIvInit, StreamCipher};
 use ethereum_types::{H128, H256};
 use sha3::{Digest, Keccak256};
+use tokio::{io::{AsyncReadExt, AsyncWriteExt}, net::TcpStream};
 
 // Note: 5 version is backward compatible with 4
 const VERSION: usize = 5;
@@ -13,7 +14,7 @@ const VERSION: usize = 5;
 const ZERO_HEADER: &[u8; 3] = &[194, 128, 128]; 
 
 use crate::{
-    ecies::Ecies, errors::{Error, Result}, messages::Hello, utils::{Aes256Ctr, HashMac, Secrets}
+    ecies::Ecies, errors::{Error, Result}, messages::{Disconnect, Hello}, utils::{Aes256Ctr, HashMac, Secrets}
 };
 
 pub struct Handshake {
@@ -27,6 +28,54 @@ impl Handshake {
             ecies: Ecies::new(private_key, remote_public_key),
             secrets: None,
         }
+    }
+
+    pub async fn v5(&mut self, stream: &mut TcpStream) -> Result<()> {
+        let auth_encrypted = self.write_auth();
+
+        if stream.write(&auth_encrypted).await? == 0 {
+            return Err(Error::TcpConnectionClosed);
+        }
+
+        let mut buf = [0_u8; 1024];
+        let resp = stream.read(&mut buf).await?;
+
+        if resp == 0 {
+            return Err(Error::InvalidResponse(
+                "Recipient's response does not contain the auth response".to_string(),
+            ));
+        }
+
+        let mut bytes_used = 0u16;
+        let decrypted = self.decrypt_message(&mut buf, &mut bytes_used)?;
+
+        if bytes_used == resp as u16 {
+            return Err(Error::InvalidResponse(
+                "Recipient's response does not contain the Hello message".to_string(),
+            ));
+        }
+
+        self.derive_secrets(decrypted)?;
+
+        let hello_frame = self.write_ack();
+        if stream.write(&hello_frame).await? == 0 {
+            return Err(Error::TcpConnectionClosed);
+        }
+
+        let frame = self.read_ack_frame(&mut buf[bytes_used as usize..resp])?;
+
+        let message_id: u8 = rlp::decode(&[frame[0]])?;
+        if message_id == 0 {
+            let hello: Hello = rlp::decode(&frame[1..])?;
+            println!("Hello message from target node:\n{:?}", hello);
+        }
+
+        if message_id == 1 {
+            let disc: Disconnect = rlp::decode(&frame[1..])?;
+            println!("Disconnect message from target node: \n{:?}", disc);
+        }
+
+        Ok(())
     }
 
     pub fn write_auth(&mut self) -> BytesMut {

@@ -1,9 +1,6 @@
 
 use secp256k1::{PublicKey, SecretKey};
-use tokio::{
-    io::{AsyncReadExt, AsyncWriteExt},
-    net::TcpStream,
-};
+use tokio::net::TcpStream;
 
 mod errors;
 mod handshake;
@@ -11,10 +8,7 @@ mod ecies;
 mod utils;
 mod messages;
 
-use crate::{
-    errors::{Error, Result},
-    handshake::Handshake, messages::{Disconnect, Hello},
-};
+use crate::{errors::{Error, Result}, handshake::Handshake};
 
 // TODO: move to Ecies
 fn id2pk(data: &[u8]) -> Result<PublicKey> {
@@ -44,68 +38,15 @@ async fn main() {
     let node_public_key = id2pk(&node_public_key_decoded).unwrap(); // remove unwraps later
 
     if let Ok(mut stream) = TcpStream::connect(ip).await {
-        println!("Connected to target adress:");
-        if let Err(e) = handshake(&mut stream, node_public_key).await {
+        println!("Connected to target adress: {:?}", ip);
+
+        let private_key = SecretKey::new(&mut secp256k1::rand::thread_rng());
+        let mut handshake = Handshake::new(private_key, node_public_key);
+
+        if let Err(e) = handshake.v5(&mut stream).await {
             println!("{e}");
         }
     } else {
         println!("Failed to connect to the given Ethereum node.");
     }
-}
-
-// TODO: move to handshake later and refactor add errors etc
-async fn handshake(stream: &mut TcpStream, node_public_key: PublicKey) -> Result<()> {
-    let private_key = SecretKey::new(&mut secp256k1::rand::thread_rng());
-
-    let mut handshake = Handshake::new(private_key, node_public_key);
-
-    let auth_encrypted = handshake.write_auth();
-
-    if stream.write(&auth_encrypted).await? == 0 {
-        println!("return Err(Error::TcpConnectionClosed);");
-    }
-
-    println!("Auth message send to target node");
-
-    let mut buf = [0_u8; 1024];
-    let resp = stream.read(&mut buf).await?;
-
-    if resp == 0 {
-        return Err(Error::InvalidResponse(
-            "Recipient's response does not contain the auth response".to_string(),
-        ));
-    }
-
-    let mut bytes_used = 0u16;
-
-    let decrypted = handshake.decrypt_message(&mut buf, &mut bytes_used)?;
-
-    if bytes_used == resp as u16 {
-        return Err(Error::InvalidResponse(
-            "Recipient's response does not contain the Hello message".to_string(),
-        ));
-    }
-
-    handshake.derive_secrets(decrypted)?;
-
-    let hello_frame = handshake.write_ack();
-    if stream.write(&hello_frame).await? == 0 {
-        return Err(Error::TcpConnectionClosed);
-    }
-
-    let frame = handshake.read_ack_frame(&mut buf[bytes_used as usize..resp])?;
-
-    let message_id: u8 = rlp::decode(&[frame[0]])?;
-
-    if message_id == 0 {
-        let hello: Hello = rlp::decode(&frame[1..])?;
-        println!("Hello message from target node:\n{:?}", hello);
-    }
-
-    if message_id == 1 {
-        let disc: Disconnect = rlp::decode(&frame[1..])?;
-        println!("Disconnect message from target node: \n{:?}", disc);
-    }
-
-    Ok(())
 }
