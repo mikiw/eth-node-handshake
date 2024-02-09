@@ -58,13 +58,19 @@ mod tests {
         let node_public_key_decoded = hex::decode(NODE_ID).unwrap();
         let mut s = [4_u8; 65];
         s[1..].copy_from_slice(&node_public_key_decoded);
-        let public_key =
-            PublicKey::from_slice(&s).unwrap();
+        let public_key = PublicKey::from_slice(&s).unwrap();
 
         let ecies = Ecies::new(private_key, public_key);
 
         assert_eq!(ecies.private_key, private_key);
-        assert_eq!(ecies.ephemeral_private_key.display_secret().to_string().len(), 64);
+        assert_eq!(
+            ecies
+                .ephemeral_private_key
+                .display_secret()
+                .to_string()
+                .len(),
+            64
+        );
         assert!(ecies.shared_key.to_string().starts_with("0x"));
         assert!(ecies.nonce.to_string().starts_with("0x"));
     }
