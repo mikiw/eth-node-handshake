@@ -16,7 +16,7 @@ use crate::{
 pub struct Ecies {
     pub private_key: SecretKey,
     pub remote_public_key: PublicKey,
-    pub ephemeral_secret_key: SecretKey,
+    pub ephemeral_private_key: SecretKey,
     pub ephemeral_public_key: PublicKey,
     pub nonce: H256,
     pub shared_key: H256,
@@ -25,18 +25,18 @@ pub struct Ecies {
 }
 
 impl Ecies {
-    pub fn new(secret_key: SecretKey, remote_public_key: PublicKey) -> Self {
-        let ephemeral_secret_key = SecretKey::new(&mut secp256k1::rand::thread_rng());
-        let ephemeral_public_key = PublicKey::from_secret_key(SECP256K1, &secret_key);
+    pub fn new(private_key: SecretKey, remote_public_key: PublicKey) -> Self {
+        let ephemeral_private_key = SecretKey::new(&mut secp256k1::rand::thread_rng());
+        let ephemeral_public_key = PublicKey::from_secret_key(SECP256K1, &private_key);
         let nonce = H256::random();
         let shared_key = H256::from_slice(
-            &secp256k1::ecdh::shared_secret_point(&remote_public_key, &secret_key)[..32],
+            &secp256k1::ecdh::shared_secret_point(&remote_public_key, &private_key)[..32],
         );
 
         Ecies {
-            private_key: secret_key,
+            private_key,
             remote_public_key,
-            ephemeral_secret_key,
+            ephemeral_private_key,
             nonce,
             ephemeral_public_key,
             shared_key,
@@ -128,7 +128,7 @@ impl Ecies {
         hmac.update(iv.as_bytes());
         hmac.update(encrypted_data);
         hmac.update(total_size);
-    
+
         Ok(H256::from_slice(&hmac.finalize().into_bytes()))
     }
 

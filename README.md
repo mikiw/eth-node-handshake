@@ -17,7 +17,7 @@ Hello { protocol_version: 5, client_version: "Geth/v1.13.4-stable-3f907d6a/linux
 ```
 
 TODO for the future:
-- Geth, erigon nodes are working fine but some of them aren't, check which of them aren't and debug why is that
-- Add more tests
+- Geth and erigon nodes are working fine but some of them aren't, check which of them aren't and debug why is that
+- Add more unit tests and some integration tests
 - Improve code structure to handle different versions of the protocol
 - Sometimes first handshake works but the second doesn't, debug why is that

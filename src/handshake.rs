@@ -136,7 +136,7 @@ impl Handshake {
             .sign_ecdsa_recoverable(
                 &secp256k1::Message::from_digest_slice(msg.as_bytes())
                     .map_err(|e| Error::InvalidSignature(e.to_string()))?,
-                &self.ecies.ephemeral_secret_key,
+                &self.ecies.ephemeral_private_key,
             )
             .serialize_compact();
 
@@ -168,7 +168,7 @@ impl Handshake {
         let ephemeral_key = H256::from_slice(
             &secp256k1::ecdh::shared_secret_point(
                 &recipient_ephemeral_pubk,
-                &self.ecies.ephemeral_secret_key,
+                &self.ecies.ephemeral_private_key,
             )[..32],
         );
 
