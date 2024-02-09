@@ -11,12 +11,13 @@ use crate::handshake::Handshake;
 
 #[tokio::main(flavor = "current_thread")]
 async fn main() {
-    let mut args = std::env::args();
-    let _inner = args.next();
-    let enode = args.next().unwrap_or_default();
-    let split = &enode.as_str()[8..].split('@').collect::<Vec<&str>>();
-    let node_public_key_input = split[0];
-    let ip = split[1];
+    let mut cli_args = std::env::args();
+    let _args = cli_args.next();
+    let arg = cli_args.next().unwrap_or_default();
+    let enode = &arg.as_str()[8..].split('@').collect::<Vec<&str>>();
+
+    let node_public_key_input = enode[0];
+    let ip = enode[1];
 
     if let Ok(mut stream) = TcpStream::connect(ip).await {
         println!("Connected to target adress: {:?}", ip);

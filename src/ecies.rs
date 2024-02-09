@@ -11,7 +11,7 @@ use crate::{
     utils::Aes128Ctr,
 };
 
-// Elliptic Curve Integrated Encryption Scheme
+// Ecies - Elliptic Curve Integrated Encryption Scheme
 // Asymmetric encryption secrets
 pub struct Ecies {
     pub private_key: SecretKey,

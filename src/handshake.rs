@@ -50,14 +50,12 @@ impl Handshake {
 
     pub async fn version_5(&mut self, stream: &mut TcpStream) -> Result<()> {
         let auth_encrypted = self.write_auth()?;
-
         if stream.write(&auth_encrypted).await? == 0 {
             return Err(Error::TcpConnectionClosed);
         }
 
         let mut buf = [0_u8; 1024];
         let resp = stream.read(&mut buf).await?;
-
         if resp == 0 {
             return Err(Error::InvalidResponse(
                 "Recipient's response does not contain the auth response".to_string(),
@@ -66,7 +64,6 @@ impl Handshake {
 
         let mut bytes_used = 0u16;
         let decrypted = self.decrypt_message(&mut buf, &mut bytes_used)?;
-
         if bytes_used == resp as u16 {
             return Err(Error::InvalidResponse(
                 "Recipient's response does not contain the Hello message".to_string(),
